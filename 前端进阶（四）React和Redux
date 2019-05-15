@@ -1,0 +1,132 @@
+>React和Redux是相互独立的两个框架。
+
+###一、React
+
+React 是一个采用声明式，高效而且灵活的用来构建用户界面的框架。具体参考React中文。
+
+React解决的问题（或者说React的优势）是：
+
+1. 通过给予程序员一个虚拟DOM供其渲染，这样就避免了修改真正的DOM。并且当页面状态改变时，会对页面的DOM做最小化修改，并重新呈现。这样就可以（至少在理论上），让程序员彻底不用考虑DOM性能。React 核心开发者、有 React API 终结者之称的 Sebastian Markbåge 撰写的React设计思想，能让你从更高的位置来重新看待React。
+
+2. React的另一个优势是函数式反应型编程(FRP)。在传统的编程中，一个包含所有对象的程序中，各个对象的状态都对应不同响应行为。当其中一个对象的状态出现异常的时候，其他对象就会不知所措，导致Bug或崩溃。这种旧的方式已经用了很久了，这就是为什么当页面崩溃时，用"刷新网页或者重启浏览器"会这么的管用。
+
+与之相反，在FRP中，页面的状态被限制在一个特定的区域，程序员只能用无状态的function来处理状态改变。然后，这些状态改变的结果会进入React的管道，被依次渲染。这种页面渲染方式，有效的解决了上述的页面崩溃。
+
+我为什么选择React？参见：[我之所以选择React的几个原因](http://tech.it168.com/a2017/0110/3090/000003090549.shtml)
+
+React的核心是将UI组件化，由数据驱动UI的展现。但是如何管理数据模型、组件与数据模型之间的通信，react并没有很好的解决方案。
+
+###二、Redux
+
+>如果你不知道是否需要 Redux，那就是不需要它。
+
+Redux 的创造者 Dan Abramov 又补充了一句。
+
+>只有遇到 React 实在解决不了的问题，你才需要 Redux 。
+
+#####阮一峰总结的需要用Redux的几个场景。
+
+* 用户的使用方式复杂
+* 不同身份的用户有不同的使用方式（比如普通用户和管理员）
+* 多个用户之间可以协作
+* 与服务器大量交互，或者使用了WebSocket
+* View要从多个来源获取数据
+
+阮一峰写的Redux三个教程参见
+
+* [Redux 入门教程（一）：基本用法](http://www.ruanyifeng.com/blog/2016/09/redux_tutorial_part_one_basic_usages.html)
+* [Redux 入门教程（二）：中间件与异步操作](http://www.ruanyifeng.com/blog/2016/09/redux_tutorial_part_two_async_operations.html)
+* [Redux 入门教程（三）：React-Redux 的用法](http://www.ruanyifeng.com/blog/2016/09/redux_tutorial_part_three_react-redux.html)
+
+如果遇到以下两个问题时，你可能需要用到Redux了：
+
+1. 跨页面数据共享
+
+2. 子组件通信
+
+Redux是一个流行的JavaScript框架，为应用程序提供一个可预测的状态容器。Redux基于简化版本的Flux框架，Flux是Facebook开发的一个框架。在标准的MVC框架中，数据可以在UI组件和存储之间双向流动，而Redux严格限制了数据只能在一个方向上流动。 具体参考Redux中文。
+
+###三、redux是怎么解决React痛点的？
+
+1. 通过react-redux提供的Provider组件,在根组件外面包一层，这样根组件，以及所有的子组件都能拿到store。实现的原理是基于React自身提供的context属性，但是react官方不推荐直接在组件中使用this.context。所以react-redux提供了另一种方法connect，通过connect将普通的UI组件升级为容器组件，同时将获取store的细节也一并封装在生成容器组件的代码中，从而容器组件可以直接拿到store。
+
+2. 使用纯函数修改state，保证state变化可预测。每次更改都返回一个全新的state。
+
+3. 遵守容器组件与展示组件分离的原则。这是redux一个重要的思想，容器组件和展示组件各司其职。
+
+通过将组件分为智能组件和傻瓜组件，在智能组件处理数据逻辑，并将store中的state转变为props传递给展示组件，对应mapStateToProps，将注入了dispatch的函数作为props传递给展示组件，对应mapDispatchToProps，通过发起action，更新state完成改变数据状态。傻瓜组件仅仅通过容器组件传进来的props进行UI展示，以及操作回调。感知不到redux的存在，脱离redux框架也能使用，尽量保持无状态(可包含少量的UI状态)。
+
+四、React操作DOM（尽量不要操作DOM）
+
+大部分情况下你不需要通过查询 DOM 元素去更新组件的 UI，你只要关注设置组件的状态（setState）。但是可能在某些情况下你确实需要直接操作 DOM。
+
+首先我们要了解 ReactDOM.render 组件返回的是什么？
+
+它会返回对组件的引用也就是组件实例（对于无状态状态组件来说返回 null），注意 JSX 返回的不是组件实例，它只是一个 ReactElement 对象（还记得我们用纯 JS 来构建 JSX 的方式吗），比如这种：
+
+	// A ReactElement
+	const myComponent = <MyComponent />
+ 
+	// render
+	const myComponentInstance = ReactDOM.render(myComponent, mountNode);
+	myComponentInstance.doSomething();
+	findDOMNode()
+
+当组件加载到页面上之后（mounted），你都可以通过 react-dom 提供的 findDOMNode() 方法拿到组件对应的 DOM 元素。
+
+	import { findDOMNode } from 'react-dom';
+ 
+	// Inside Component class
+	componentDidMound() {
+		const el = findDOMNode(this);
+	}
+findDOMNode() 不能用在无状态组件上。
+
+Refs
+
+另外一种方式就是通过在要引用的 DOM 元素上面设置一个 ref 属性指定一个名称，然后通过 this.refs.name 来访问对应的 DOM 元素。
+
+比如有一种情况是必须直接操作 DOM 来实现的，你希望一个 <input/> 元素在你清空它的值时 focus，你没法仅仅靠 state 来实现这个功能。
+
+	class App extends Component {
+		constructor() {
+    		return { userInput: '' };
+  		}
+    	handleChange(e) {
+    		this.setState({ userInput: e.target.value });
+    	}
+ 
+	clearAndFocusInput() {
+    	this.setState({ userInput: '' }, () => {
+      		this.refs.theInput.focus();
+    	});
+  	}
+ 
+	render() {
+    	return (
+      		<div>
+        		<div onClick={this.clearAndFocusInput.bind(this)}>
+          			Click to Focus and Reset
+        		</div>
+        	<input
+          		ref="theInput"
+          		value={this.state.userInput}
+          		onChange={this.handleChange.bind(this)}
+        	/>
+      		</div>
+    	);
+  		}
+	}
+如果 ref 是设置在原生 HTML 元素上，它拿到的就是 DOM 元素，如果设置在自定义组件上，它拿到的就是组件实例，这时候就需要通过 findDOMNode 来拿到组件的 DOM 元素。
+
+因为无状态组件没有实例，所以 ref 不能设置在无状态组件上，一般来说这没什么问题，因为无状态组件没有实例方法，不需要 ref 去拿实例调用相关的方法，但是如果想要拿无状态组件的 DOM 元素的时候，就需要用一个状态组件封装一层，然后通过 ref 和 findDOMNode 去获取。
+
+###总结
+
+你可以使用 ref 到的组件定义的任何公共方法，比如 this.refs.myTypeahead.reset()
+Refs 是访问到组件内部 DOM 节点唯一可靠的方法
+Refs 会自动销毁对子组件的引用（当子组件删除时）
+注意事项
+
+不要在 render 或者 render 之前访问 refs
+不要滥用 refs，比如只是用它来按照传统的方式操作界面 UI：找到 DOM -> 更新 DOM
