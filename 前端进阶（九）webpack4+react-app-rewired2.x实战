@@ -1,0 +1,218 @@
+webpack4和webpack3区别还是比较大，而且webpack4虽然可以自定义配置，但是配置过程还是较为繁琐，所以我们使用react-app-rewired来减少配置，react-app-rewired传送门：[https://github.com/timarney/react-app-rewired](https://github.com/timarney/react-app-rewired)
+
+webpack4官方不再支持node4以下的版本，依赖node的环境版本>=6.11.5，当然考虑到最佳的es6特性实现，建议node版本可以升级到V8.9.4或以上版本，具体更新说明部分可以见：webpack4更新日志
+
+1、初始化创建一个 demo 文件夹，做一些简单的初始化信息，并本地安装 webpack，此时项目中没有 webpack 配置文件。
+
+	mkdir webpack4-demo ## 创建目录
+	cd webpack4-demo ## 进入目录
+	npm install yarn -g
+	yarn init -y ## 快速 yarn 初始化
+	yarn add webpack --dev ## 安装 webpack
+2、修改 package.json 文件：
+
+	"scripts": {
+    	"build": "webpack"
+	}
+3、创建项目目录
+
+在目录下创建 src 文件夹，并且新建一个文件 index.js 并且输入内容 console.log('hello webpack 4')，再次运行 yarn build。
+
+4、运行
+
+	yarn build
+过程中会报错
+
+![](https://img-blog.csdnimg.cn/20190324221406118.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTQ3NDQxMTg=,size_16,color_FFFFFF,t_70)
+ 
+根据提示安装webpack-cli：
+
+	yarn add webpack-cli
+
+5、再次运行
+
+	yarn build
+这时可以看到编译成功，项目目录下多出一个 dist 文件夹，我们事先也并没有配置 output 输出指向，Webpack 默认将 bundle 好的内容，放在了 dist 文件夹内。
+
+在执行成功的过程中，有一处警告提示，webpack4新增的mode属性，可以指定生产/开发模式。
+
+6、此时根据你的项目框架React/Vue使用情况安装react/vue全家桶，省略(React项目需要安装react-scripts)。。。
+
+7、接下来安装react-app-rewired最新版本，切记：不能安装react-app-rewired1.x版本
+
+	npm install react-app-rewired --save-dev
+8、新建config-overrides.js，并输入
+
+	/* config-overrides.js */
+ 
+	module.exports = function override(config, env) {
+  		//do stuff with the webpack config...
+  		return config;
+	}
+此时目录大体结构：
+
+	+-- your-project
+	|   +-- config-overrides.js
+	|   +-- node_modules
+	|   +-- package.json
+	|   +-- public
+	|   +-- README.md
+	|   +-- src
+9、将package.json中的scripts替换如下：
+
+	"scripts": {
+    	"start": "react-app-rewired start",
+    	"build": "react-app-rewired build",
+    	"test": "react-app-rewired test",
+    	"eject": "react-app-rewired eject"
+  	},
+10、此时react-app-rewired使用方式为
+
+	npm start 开发模式
+	npm run build 生产模式
+如果想要修改默认配置，可以在config-overrides.js中完成我们的webpack配置文件修改。
+
+11、使用customize-cra简化config-overrides配置
+
+详见https://github.com/arackaf/customize-cra
+
+12、package.json
+
+	{
+  		"name": "demo",
+  		"version": "0.1.0",
+  		"private": true,
+  		"dependencies": {
+    		"accounting": "^0.4.1",
+    		"antd": "^3.15.1",
+    		"babel-plugin-transform-decorators-legacy": "^1.3.5",
+    		"babel-polyfill": "^6.26.0",
+    		"babel-preset-env": "^1.7.0",
+    		"echarts": "^4.2.0-rc.2",
+    		"echarts-for-react": "^2.0.15-beta.0",
+    		"echarts-gl": "^1.1.1",
+    		"less": "^3.9.0",
+    		"loadsh": "^0.0.3",
+    		"moment": "^2.24.0",
+    		"re-resizable": "^4.11.0",
+    		"react": "^16.8.2",
+    		"react-addons-pure-render-mixin": "^15.6.2",
+    		"react-dom": "^16.8.2",
+    		"react-intl": "^2.8.0",
+    		"react-redux": "^6.0.1",
+    		"react-router-config": "^5.0.0",
+    		"react-router-dom": "^4.3.1",
+    		"react-scripts": "2.1.5",
+    		"redux": "^4.0.1",
+    		"redux-promise-middleware": "^5.0.0"
+  		},
+  		"scripts": {
+    		"start": "react-app-rewired start --mode development",
+    		"build": "react-app-rewired build",
+    		"test": "react-app-rewired test",
+    		"eject": "react-app-rewired eject"
+  		},
+  		"eslintConfig": {
+    		"extends": "react-app"
+  		},
+  		"browserslist": [
+    		">0.2%",
+    		"not dead",
+    		"not ie <= 11",
+    		"not op_mini all"
+  		],
+  		"devDependencies": {
+    		"@babel/plugin-proposal-decorators": "^7.3.0",
+    		"babel-plugin-import": "^1.11.0",
+    		"customize-cra": "^0.2.11",
+    		"less-loader": "^4.1.0",
+    		"react-app-rewired": "^2.1.0",
+    		"webpack-bundle-analyzer": "^3.0.4",
+    		"webpack-dev-server": "^3.2.1"
+  		},
+  		"homepage": ".",
+  		"proxy": "http://22.222.22.22/",//代理ip
+  		"main": "index.js",
+  		"license": "MIT"
+	}
+12、config-overrides.js
+
+	const {
+  		override,
+  		fixBabelImports,
+  		addLessLoader,
+  		addDecoratorsLegacy,
+  		addWebpackAlias
+		} = require('customize-cra');
+	const path = require('path');
+	const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+ 
+	const addCustomize = () => config => {
+  		if (process.env.NODE_ENV === 'production') {
+    		config.devtool = false; //去掉map文件
+    		if (config.plugins) {
+      			config.plugins.push(new BundleAnalyzerPlugin());
+    		}
+    		const splitChunksConfig = config.optimization.splitChunks;
+     		if (config.entry && config.entry instanceof Array) {
+       			config.entry = {
+         			main: config.entry,
+         			vendor: ["react", "react-dom", "react-router-dom", "react-redux", "redux", 'react-router-	config',"lodash", "moment", 'react-intl', 'react-addons-pure-render-mixin', 'redux-promise-	middleware', "react-router", 
+         			]
+       			}
+     		} else if (config.entry && typeof config.entry === 'object') {
+       			config.entry.vendor = ["react", "react-dom", "react-router-dom", "react-redux", "redux", 'react-	router-config', "lodash", "moment", 'react-intl', 'react-addons-pure-render-mixin', 'redux-	promise-middleware', "react-router", 
+       			];
+     	}
+ 
+    	Object.assign(splitChunksConfig, {
+      		chunks: 'all',
+      		cacheGroups: {
+        	vendors: {
+          		test: /node_modules/,
+          		name: 'vendors',
+          		priority: -10,
+        	},
+        	common: {
+          		name: 'common',
+          		minChunks: 2,
+          		minSize: 30000,
+          		chunks: 'all'
+        	}
+      		}
+    	})
+  		}
+  		return config;
+	}
+ 
+ 
+	module.exports = override(
+  		fixBabelImports('lodash', {
+    		libraryDirectory: '',
+    		camel2DashComponentName: false
+  		}),
+  		addLessLoader({
+    		modifyvars: {
+      			"@icon-url": `${path.resolve(__dirname,'build/assets/font/iconfont')}`, //使用本地字体文件
+      			'@font-size-base': '13px',
+      			'@primary-color': '#00879C'
+    		},
+    		javascriptEnabled: true
+  		}),
+  		addWebpackAlias({
+    		'@': path.resolve(__dirname, 'src')
+  		}),
+  		addDecoratorsLegacy(),
+  		addCustomize()
+	);
+###参考资料：
+
+1. [Webpack4 实战 React 和 Vue 项目](https://jdc.jd.com/archives/212580)
+
+2. [最新React全家桶实战使用配置指南](https://github.com/lvming6816077/react-family-bucket/issues/2)
+
+3. [react-app-rewired](https://github.com/timarney/react-app-rewired)
+
+4. [React-CRA 多页面配置（react-app-rewired](https://segmentfault.com/a/1190000017858725)
+
+5. [customize-cra](https://github.com/arackaf/customize-cra)
