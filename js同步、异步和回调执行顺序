@@ -1,0 +1,41 @@
+####先说结论：基本原则：同步->异步->回调
+
+经典实例：
+
+	let promise = new Promise(
+  		function(resolve, reject) {
+    		console.log(1)
+    		setTimeout(() => console.log(2), 0)
+    		console.log(3)
+    		console.log(4)
+    		resolve(true)
+  		}
+	)
+	promise.then(v => {
+  		console.log(8)
+	})
+ 
+	let promise2 = new Promise(
+  		function() {
+    		console.log(5)
+    		setTimeout(() => console.log(6), 0)
+  	}
+	)
+ 
+	console.log(7)；
+1. 看同步代码：a变量是一个Promise，我们知道Promise是异步的，是指他的then()和catch()方法，Promise本身还是同步的，所以这里先执行a变量内部的Promise同步代码。（同步优先）
+
+2. Promise内部有4个console，第二个是一个setTimeout回调（回调垫底）。所以这里先输出1，3，4回调的方法丢到消息队列中排队等着。
+
+3. 接着执行resolve(true)，进入then()，then是异步，下面还有同步没执行完呢，所以then也滚去消息队列排队等候。（真可怜）（异步靠边）
+4. b变量也是一个Promise，和a一样，执行内部的同步代码，输出5，setTimeout滚去消息队列排队等候。
+
+5. 最下面同步输出7。
+
+6. 同步的代码执行完了，JavaScript就跑去消息队列呼叫异步的代码：异步，出来执行了。这里只有一个异步then，所以输出8。
+
+7. 异步也over，轮到回调的孩子们：回调，出来执行了。这里有2个回调在排队，他们的时间都设置为0，所以不受时间影响，只跟排队先后顺序有关。则先输出a里面的回调2，最后输出b里面的回调6。
+
+8. 最终输出结果就是：1、3、4、5、7、8、2、6。
+
+注意：回调函数正常情况下是在消息队列顺序执行的，但是使用setTimeout的时候，还需要注意时间的大小也会改变它的顺序。
