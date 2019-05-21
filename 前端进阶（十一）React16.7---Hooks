@@ -1,0 +1,266 @@
+使用Hooks可以让你在不适用类的情况下使用状态和其他的一些react功能。[可在此讨论](https://github.com/reactjs/rfcs/pull/68)
+
+ 或者查看[Hooks概览](https://reactjs.org/docs/hooks-overview.html)
+
+看下面代码：
+
+	import { useState } from 'react';
+ 
+	function Example() {
+  		const [count, setCount] = useState(0);
+  		return (
+    		<div>
+      			<p>You clicked {count} times</p>
+      			<button onClick={() => setCount(count + 1)}>
+        			Click me
+      			</button>
+    		</div>
+  		);
+	}
+可以看到上面有个useState,这个就是我们将要学习的第一个Hook.
+
+###无重大改变
+* 完全选择加入： 你可以在几个组件中尝试Hooks，而无需重写任何现有代码。但是如果你不想这样，你现在可以不用学习或使用Hooks。
+* 100％向后兼容: Hooks不包含任何重大更改。
+* 现在可使用: Hook目前处于alpha版本，更希望在收到社区反馈后将它们包含在React 16.7中
+
+没有计划从React中删除class。
+
+Hook不会取代你对React概念的了解。 相反，Hooks为你已经知道的React概念提供了更直接的API：props，state，context，refs和lifecycle。正如我们稍后将展示的，Hooks还提供了一种新的强大方式来组合它们。
+
+###动机
+Hook解决了React中各种看似无关的问题，我们在编写和维护数以万计的组件时遇到了这些问题。无论你是在学习React，每天使用它，还是更喜欢使用具有类似组件模型的不同库，你都可能会发现其中的一些问题。
+
+#####在组件之间重用有状态逻辑很困难
+
+React没有提供将可重用行为“附加”到组件的方法（例如，将其连接到store）。如果你已经使用React一段时间，你可能熟悉渲染道具和高阶组件等模式，试图解决这个问题。但是这些模式要求你在使用它们时重构组件，这可能很麻烦并且使代码更难以遵循。如果你看一下React DevTools中一个典型的React应用程序，你可能会发现一个由包含提供者，消费者，高阶组件，渲染道具和其他抽象层的组件组成的“包装器地狱”。虽然我们可以在DevTools中过滤它们，但这指出了一个更深层次的基本问题：React需要一个更好的原语来共享有状态逻辑。
+
+使用Hook，你可以从组件中提取有状态逻辑，以便可以独立测试并重用。Hook允许您在不更改组件层次结构的情况下重用有状态逻辑。 这样可以轻松地在许多组件之间或与社区共享Hook。
+
+#####复杂的组件变得难以理解
+
+我们经常不得不维护一些开始简单的组件，但最后却变成了无法管理的状态逻辑和副作用的情况。每个生命周期方法通常包含不相关逻辑的混合。例如，组件可能会在componentDidMount和componentDidUpdate中执行一些数据提取。并且，相同的componentDidMount方法可能还包含一些设置事件侦听器的无关逻辑，并在componentWillUnmount中执行清理。这样，相互关联的代码被拆分，但完全不相关的代码最终组合在一个方法中。这很容易引入错误和不一致。
+
+在许多情况下，不可能将这些组件分解为较小的组件，因为状态逻辑遍布整个地方。测试它们也很困难。这是许多人更喜欢将React与单独的状态管理库相结合的原因之一。但是，这通常会引入太多的抽象，要求在不同的文件之间跳转，并使重用组件变得更加困难。
+
+为了解决这个问题，Hooks允许根据相关的部分（例如设置订阅或获取数据）将一个组件拆分为较小的函数， 而不是基于生命周期方法强制拆分。你还可以选择使用reducer管理组件的本地状态，以使其更具可预测性。
+
+#####class混淆了人和机器
+
+在我们的观察中，class是学习React的最大障碍。你必须记住bind事件处理程序。没有不稳定的语法提议，代码非常冗长。开发者可以很好地理解props，state和自上而下的数据流，但仍然很难与类斗争。React中的函数和类组件之间的区别以及何时使用每个组件导致即使在经验丰富的React开发人员之间也存在分歧。
+
+此外，React已经推出了大约五年，我们希望确保它在未来五年内保持相关性。正如Svelte，Angular，Glimmer和其他人所表明的那样，提前编译组件在未来有很大潜力。特别是如果它不限于模板。最近，我们一直在尝试使用Prepack进行组件折叠，我们已经看到了有希望的早期结果。但是，我们发现类组件可能会增长无意识的模式，使这些优化回归到较慢的路径。类也为今天的工具提出了问题。例如，类不会很好地缩小，并且它们使得热加载片状和不可靠。我们希望提供一种API，使代码更有可能保持可优化途径。
+
+为了解决这些问题，Hooks允许你在没有类的情况下使用更多React的功能。 从概念上讲，React组件一直更接近功能(function)。 Hooks拥抱功能，但不会牺牲React的实践精神。钩子提供了对命令式逃生舱口的访问，并且不需要你学习复杂的功能或反应式编程技术。
+
+>[Hooks概览](https://reactjs.org/docs/hooks-overview.html)是开始学习Hooks的好地方。
+
+###逐步采用策略
+>没有计划从React中删除类。
+
+之前我们介绍了使用hooks的原因，在开始介绍api之前，现在我们先来整体的预览下这些api。 从上篇的介绍可以知道，Hook是向后兼容的，有react开发经验的你看起来会更顺畅。
+
+是一个快节奏的概述。如果你感到困惑，可以看下上面提到的介绍里的动机：
+
+详细说明 阅读动机以了解我们为何将Hooks引入React。
+
+###State Hook
+看下面的例子，他是一个计数器
+
+	import { useState } from 'react';
+ 
+	function Example() {
+  		// Declare a new state variable, which we'll call "count"
+  		const [count, setCount] = useState(0);
+ 
+  		return (
+    		<div>
+      			<p>You clicked {count} times</p>
+      			<button onClick={() => setCount(count + 1)}>
+        			Click me
+      			</button>
+    		</div>
+  		);
+	}
+
+在这里useState是一个Hook（我们将在稍后讨论这意味着什么）。可以看到，在这个函数组件里，我们向他添加一些本地状态。React将在重新渲染之间保留这状态。 useState返回一对：当前状态值(count)和允许你更新状态的函数(setCount)。你可以从事件处理程序或其他位置调用此函数。这个函数类似于类中的this.setState，但是它不会将旧状态和新状态合并在一起。（我们将在使用State Hook中显示一个将useState与this.state进行比较的示例。）
+
+useState的唯一参数是初始状态。 在上面的例子中，它是0，因为我们的计数器从零开始。请注意，与this.state不同，此处的状态不必是对象 - 尽管可以是任何你想要的。初始状态参数仅在第一次渲染期间使用。
+
+####声明多个state
+
+你可以在一个组件中多次使用State Hook：
+
+	function ExampleWithManyStates() {
+  		const [age, setAge] = useState(42);
+  		const [fruit, setFruit] = useState('banana');
+  		const [todos, setTodos] = useState([{ text: 'Learn Hooks' }]);
+  		// ...
+	}
+
+数组解构语法允许我们为通过调用useState声明的状态变量赋予不同的名称。这些名称不是useState API的一部分。相反，React假定如果多次调用useState，则在每次渲染期间以相同的顺序执行。我们将回到为什么这种方法有效以及何时有用。
+
+什么是Hook
+钩子是允许从功能组件(function component)“挂钩”React状态和生命周期功能的功能。钩子在类内部不起作用 - 它们允许你在没有类的情况下使用React。 (我们不建议你在一夜之间重写现有组件，但如果你愿意，可以开始在新组件中使用Hook。）
+
+React提供了一些像useState这样的内置Hook。你还可以创建自定义Hook以在不同组件之间重用有状态行为。我们先来看看内置的Hooks。
+
+详细说明 你可以在使用State Hook中了解更多信息。
+
+Effect Hook
+你之前可能已经从React组件执行数据提取，订阅或手动更改DOM。我们将这些操作称为“副作用”（或简称为“效果”），因为它们会影响其他组件，并且在渲染过程中无法完成。
+
+Effect Hook中的useEffect增加了在功能组件执行副作用的功能。它与React类中的componentDidMount，componentDidUpdate和componentWillUnmount具有相同的用途，但统一为单个API。(我们将在使用Effect Hook时显示将useEffect与这些方法进行比较的示例。）
+
+例如，下面的组件将在React更新DOM后设置文档标题：
+
+	import { useState, useEffect } from 'react';
+ 
+	function Example() {
+  		const [count, setCount] = useState(0);
+ 
+  		// 类似componentDidMount 和 componentDidUpdate:
+  		useEffect(() => {
+    		// Update the document title using the browser API
+    		document.title = `You clicked ${count} times`;
+  		});
+ 
+  		return (
+    		<div>
+      			<p>You clicked {count} times</p>
+      			<button onClick={() => setCount(count + 1)}>
+        			Click me
+      			</button>
+    		</div>
+  		);
+	}
+
+当你调用useEffect时，你就在告诉react运行你的‘效果’函数当刷新对DOM的更改后(你可以认为是render之后)。 效果在组件内声明，因此可以访问其props和state。默认情况下，React在每次渲染后运行效果 - 包括第一次渲染。 
+
+Effects还可以通过指定返回函数来清理他们。看下面的这个例子：
+
+	import { useState, useEffect } from 'react';
+ 
+	function FriendStatus(props) {
+  		const [isOnline, setIsOnline] = useState(null);
+ 
+  		function handleStatusChange(status) {
+    		setIsOnline(status.isOnline);
+  		}
+ 
+  		useEffect(() => {
+    		ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
+ 
+    		return () => {
+      			ChatAPI.unsubscribeFromFriendStatus(props.friend.id, handleStatusChange);
+    		};
+  		});
+ 
+  		if (isOnline === null) {
+    		return 'Loading...';
+  		}
+  		return isOnline ? 'Online' : 'Offline';
+	}
+
+在这个示例中，当组件卸载时，以及在由于后续渲染而重新运行效果之前，React将取消订阅我们的ChatAPI。
+
+就像使用useState一样， 你也可以在组件中使用多个useEffect：
+
+	function FriendStatusWithCounter(props) {
+  		const [count, setCount] = useState(0);
+  		useEffect(() => {
+    		document.title = `You clicked ${count} times`;
+  		});
+ 
+  		const [isOnline, setIsOnline] = useState(null);
+  		useEffect(() => {
+    		ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
+    		return () => {
+      			ChatAPI.unsubscribeFromFriendStatus(props.friend.id, handleStatusChange);
+    		};
+  		});
+ 
+  		function handleStatusChange(status) {
+    		setIsOnline(status.isOnline);
+  		}
+  		// ...
+	}
+Hooks允许你通过哪些部分相关（例如添加和删除订阅）来组织组件中的副作用，而不是基于生命周期方法强制拆分。
+
+详细说明 你可以在使用Effect Hook中了解更多信息。
+
+###Hooks的规则
+钩子是JavaScript函数，但它们强加了两个额外的规则：
+
+只能在顶层调用Hooks。不要在循环，条件或嵌套函数中调用Hook
+仅从React功能组件调用Hooks。 不要从常规JavaScript函数中调用Hook。 （还有另一个有效的地方叫Hooks - 你自己的定制Hooks。我们马上就会了解它们。）
+详细说明 你可以在Rules Hook中了解更多信息。
+
+###Custom Hooks
+#####有时，我们希望在组件之间重用一些有状态逻辑的部分。传统上，这个问题有两个流行的解决方案：高阶组件和渲染道具。
+
+Custom Hooks允许你执行这样的操作，并且无需向树中添加更多组件。在上面我们介绍了一个调用useState和useEffect Hooks的FriendStatus组件来订阅朋友的在线状态。假设我们还希望在另一个组件中重用此订阅逻辑。 首先，我们将这个逻辑提取到一个名为useFriendStatus的自定义Hook中：
+
+	import { useState, useEffect } from 'react';
+ 
+	function useFriendStatus(friendID) {
+  		const [isOnline, setIsOnline] = useState(null);
+ 
+  		function handleStatusChange(status) {
+    		setIsOnline(status.isOnline);
+  		}
+ 
+  		useEffect(() => {
+    		ChatAPI.subscribeToFriendStatus(friendID, handleStatusChange);
+    		return () => {
+      			ChatAPI.unsubscribeFromFriendStatus(friendID, handleStatusChange);
+    		};
+  		});
+ 
+  		return isOnline;
+	}
+
+它将friendID作为参数，并返回我们的朋友是否在线。 现在我们可以从两个组件中使用它：
+
+	function FriendStatus(props) {
+  		const isOnline = useFriendStatus(props.friend.id);
+ 
+  		if (isOnline === null) {
+    		return 'Loading...';
+  		}
+  		return isOnline ? 'Online' : 'Offline';
+	}
+
+	function FriendListItem(props) {
+  		const isOnline = useFriendStatus(props.friend.id);
+ 
+  		return (
+    		<li style={{ color: isOnline ? 'green' : 'black' }}>
+      			{props.friend.name}
+    		</li>
+  		);
+	}
+
+这些组件的状态是完全独立的。钩子是重用有状态逻辑的一种方式，而不是状态本身。 事实上，每次调用Hook都有一个完全隔离的状态 - 所以你甚至可以在一个组件中使用相同的自定义Hook两次。
+
+custom hook更像是一种约定而非功能。如果函数的名称以use开头并且它调用其他Hook，我们说它是一个Custom Hook。useSomething命名约定是linter插件如何使用Hooks在代码中查找错误的。
+
+详细说明 你可以在Writing Custom Hooks中了解更多信息。
+
+###Other Hooks
+你可能会发现一些不太常用的内置Hook很有用。例如，useContext允许订阅React上下文而不引入嵌套：
+
+	function Example() {
+  		const locale = useContext(LocaleContext);
+  		const theme = useContext(ThemeContext);
+  		// ...
+	}
+
+useReducer允许使用reducer管理复杂组件的本地状态：
+
+	function Todos() {
+  		const [todos, dispatch] = useReducer(todosReducer);
+  		// ...
+	}
+
+详细说明 你可以在 Hooks API Reference.中了解更多信息。或者这里https://www.jianshu.com/p/6c43b440dab8
