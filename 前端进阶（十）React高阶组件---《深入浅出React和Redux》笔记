@@ -1,0 +1,220 @@
+##一、高阶组件
+
+高阶组件（ Higher Order Component, HOC ）并不是 React 提供的某种 API ，而是使用 React 的一种模式，用于增强现有组件的功能 。
+一个高阶组件就是一个函数，这个函数接受一个组件作为输入，然后返回一个新的组件作为结果，而且返回的新组件拥有了输入组件所不具有的功能。
+
+简单的高阶组件示例。减少props的例子
+
+	import React from 'react';
+ 
+	function removeUserProp(WrappedComponent) {
+		return class WrappingComponent extends React.Component {
+			render() {
+				const {user, ... otherProps} = this.props;
+				return <WrappedComponent {... otherProps) />
+			}
+		}
+	}
+ 
+	export default removeUserProp;
+
+高阶组件作用
+
+1. 重用代码
+
+2. 修改现有 React 组件的行为 。
+
+##二、高阶组件实现方式
+
+* 代理方式的高阶组件
+* 继承方式的高阶组件
+
+###1、代理方式的高阶组件
+
+####(1)操纵 prop
+增加props的例子
+
+		const addNewProps = (WrappedComponent, newProps) => {
+    		return class WrappingComponent extends React.Component {
+        		render() {
+            		return <WrappedComponent {... this.props} {... newProps} />
+        		}
+    		}
+		}
+
+####(2)访问 ref（不推荐使用）
+写一个名 为 refsHOC 的高阶组件，能够获得被包裹组件的直接应用 ref，然后就可以根据 ref 直接操纵被包裹组件的实例。refsHOC 的工作原理其实也是增加传递给被包裹组件的 props ，只是利用了 ref这个特殊的 prop, ref 这个 prop 可以是一个函数，在被包裹组件的装载过程完成的时候被调用，参数就是被装载的组件本身 。传递给被包裹组件的 ref值是一个成员函数 linkRef，当 linkRef被调用时就得到了被包裹组件的 DOM 实例，记录在 this.root 中 。
+
+		const refsHOC = (WrappedComponent) => {
+    		return class HOCComponent extends React.Component {
+        		constructor () {
+            		super (...arguments) ;
+            		this.linkRef = this.linkRef.bind(this);
+        		}
+
+        		linkRef(wrappedinstance} {
+            		this._root = wrappedinstance;
+        		}
+
+        		render (} {
+            		const props= { ...this.props, ref: this.linkRef};
+            		return <WrappedComponent {.. . props}/>;
+        		}
+    		}
+		}	
+
+####(3)抽取状态
+react-redux 的 connect 函数，注意 connect 函数本身并不是高阶组件， connect 函数执行的结果是另 一个函数，这个函数才是高阶组件 。
+在傻瓜组件和容器组件的关系中，通常让傻瓜组件不要管理自己的状态，只要做一个无状态的组件就好，所有状态的管理都交给外面的容器组件，这个模式就是“抽取状态”。
+
+简易版connect 高阶组件
+
+	const doNothing = () => ({}) ;
+	function connect(mapStateToProps=doNothing, mapDispatchToProps=doNothing) {
+    	return function(WrappedComponent) {
+        	class HOCComponent extends React.Component {
+            	//在这里定义HOCComponent 的生命周期函数
+            	constructor () {
+                	super (... arguments) ;
+                	this.onChange = this.onChange.bind(this) ;
+                	this.store={};
+            	}
+ 
+            	componentDidMount() {
+                	this.context.store.subscribe(this.onChange);
+            	}
+ 
+            	componentWillUnmount() {
+                	this.context.store.unsubscribe(this.onChange );
+            	}
+ 
+            	onChange() {
+                	this.setState({});
+            	}
+ 
+            	render(){
+                	const store = this.context.store;
+                	const newProps = {
+                    	...this.props,
+                    	...mapStateToProps(store.getState()),
+                    	...mapDispatchToProps(store.dispatch),
+                	}
+                	return <WrappedComponent {... newProps) />;
+            	}
+        	}
+ 
+        	HOCComponent.contextTypes = {
+            	store: React.PropTypes.object
+        	}
+        	return HOCComponent;
+    	}
+	}
+
+#####注意，这里我们实现的并不是完整的 connect 实现逻辑。比如，没有实现 shouldComponentUpdate 函数，缺少 shouldComponentUpdate 会导致每次 Store 状态变化都走一遍完整的更新过程。
+ 
+
+####(4)包装组件
+给组件添加样式 style
+
+	const styleHOC = (WrappedComponent, style) => {
+    	return class HOCComponent extends React.Component {
+        	render() {
+            	return (
+                	<div style={style}>
+                    	<WrappedComponent {...this.props}/>
+                	</div>
+            	);
+        	}
+    	}
+	}
+
+###2、继承方式的高阶组件
+
+继承方式的高阶组件采用继承关系关联作为参数的组件和返回的组件，假如传入的组件参数是 WrappedComponent，那么返回的组件就直接继承自 WrappedComponent。
+用继承方式重新实现一遍 removeUserProp 这个高阶组件
+
+	function removeUserProp(WrappedComponent) {
+    	return class NewComponent extends WrappedComponent {
+        	render() {
+            	const {user, ...otherProps} = this.props;
+            	this.props = otherProps;
+            	return super.render()
+        	}
+    	}
+	}
+
+#####代理方式和继承方式最大的区别，是使用被包裹组件的方式 。
+在代理方式下， render 函数中的使用被包裹组件是通过 JSX 代码：
+
+	return <WrappedComponent {...otherPropsl/>
+
+在继承方式下， render 函数中渲染被包裹组件的代码如下：
+
+	return super.render()
+因为我们创造的新的组件继承自传人的 WrappedComponent，所以直接调用 super.render 就能够得到渲染出来的元素。
+
+注意:在代理方式下 WrappedComponent 经历了一个完整的生命周期，但在继承方式下 super.render 只是一个生命周期中的一个函数而已；在代理方式下产生的新组件和参数组件是两个不同的组件，一次渲染，两个组件都要经历各自的生命周期，在继承方式下两者合二为一，只有一个生命周期 。
+继承方式的高阶组件可以应用于下列场景：
+
+操纵 prop
+继承方式的高阶组件也可以操纵 props ，除了上面不安全的直接修改 this.props 方法，还可以利用 React.cloneElement 让组件重新绘制：
+下面的高阶组件实现的功能是首先检查参数组件的 render 函数返回结果，如果顶层元素是一个 div ，就将其增加一个 color 为 red 的 style 属性，否则增加 color 为 green 的style 属性 。 最后，我们用 React.cloneElement 来传入新的 props ，让这些产生的组件重新渲染一遍 。
+
+上面的高阶组件实现的功能是首先检查参数组件的 render 函数返回结果，如果顶层元素是一个 div ，就将其增加一个 color 为 red 的 style 属性，否则增加 color 为 green 的style 属性 。 最后，我们用 React.cloneElement 来传入新的 props ，让这些产生的组件重新渲染一遍 。
+
+const modi fyProps HOC = (WrappedComponent) => {
+    return class NewComponent extends WrappedComponent {
+        render() {
+            const elements= super.render() ;
+            const newStyle = {
+                color: (elements && elements. type === 'div') ? 'red' : 'green'
+            }
+            const newProps = {...this.props, style: newStyle};
+            return React.cloneElement(elements, newProps, lements.props.children);
+        }
+    }
+}
+操纵生命周期函数
+ 
+因为继承方式的高阶函数返回的新组件继承了参数组件，所以可以重新定义任何一个 React 组件的生命周期函数 。这是继承方式高阶函数特用的场景，代理方式无法修改传入组件的生命周期函数，所以不具备这个功能 。
+可以定义一个高阶组件，让参数组件只有在用户登录时才显示，代码如下：
+
+	const onlyForLoggedinHOC = (WrappedComponent) => {
+    	return class NewComponent extends WrappedComponent {
+        	render () {
+            	if (this.props.loggedin) {
+                	return super.render();
+            	} else {
+                	return null;
+            	}
+        	}
+    	}
+	}
+我们可以重新定义 shouldComponentUpdate 函数，只要 prop 中的 useCache不为逻辑 false 就不做重新渲染的动作，代码如下：
+
+	const cacheHOC = (WrappedComponent) => {
+    	return class NewComponent extends WrappedComponent {
+        	shouldComponentUpdate(nextProps, nextState) {
+            	return !nextProps.useCache;
+        	}
+    	}
+	}
+从上面例子的比较可以看出来，各方面看来代理方式都要优于继承方式 。业界有一句老话：“优先考虑组合，然后才考虑继承。 ”（ Composition over Inheritance ） 。
+##三、以函数为子组件
+
+高阶组件要求参数组件必须和自己有契约的方式。
+
+以函数为子组件”的模式就是为了克服高阶组件的这种局限而生的 。 在这种模式下，实现代码重用的不是一个函数，而是一个真正的 React 组件，这样的 React 组件有个特点，要求必须有子组件的存在，而且这个子组件必须是一个函数 。 在组件实例的生命周期函数中， this .props .children 引用的就是子组件， render 函数会直接把 this.props.children当做函数来调用，得到的结果就可以作为 render 返回结果的一部分 。
+把 addUserProp 高阶函数用“以函数为子组件”的方式重新实现，代码如下：
+
+	const loggedinUser =’ mock user ’;
+	class AddUserProp extends React . Component {
+    	render{) {
+        	const user = loggedinUser ;
+        	return this.props.children(user);   
+	}
+	AddUserProp.propTypes = {
+    	children: React.PropTypes.func.isRequired
+	}
+
+使用这个 AddUserProp 的灵活之处在于它没有对被增强组件有任何 props 要求，只是传递一个参数过去，至于怎么使用，完全由作为子组件的函数决定 。
