@@ -1,0 +1,342 @@
+传统意义上的 JavaScript 运行在浏览器上，这是因为浏览器内核实际上分为两个部分:渲染引擎和 JavaScript 引擎。前者负责渲染 HTML + CSS，后者则负责运行 JavaScript。Chrome 使用的 JavaScript 引擎是 V8，它的速度非常快。
+
+Node.js 是一个运行在服务端的框架，它的底层就使用了 V8 引擎。我们知道 Apache + PHP 以及 Java 的 Servlet 都可以用来开发动态网页，Node.js 的作用与他们类似，只不过是使用 JavaScript 来开发。
+
+从定义上介绍完后，举一个简单的例子，新建一个 app.js 文件并输入以下内容:
+
+	var http = require('http');
+	http.createServer(function (request, response) {
+    	response.writeHead(200, {'Content-Type': 'text/plain'}); // HTTP Response 头部
+    	response.end('Hello World\n'); // 返回数据 “Hello World”
+	}).listen(8888); // 监听 8888 端口
+
+// 终端打印如下信息
+
+	console.log('Server running at http://127.0.0.1:8888/');
+
+ 这样，一个简单的 HTTP Server 就算是写完了，输入 node app.js 即可运行，随后访问 便会看到输出结果。
+
+###为什么要用Node？
+总的来说，Node.js 适合以下场景:
+
+实时性应用，比如在线多人协作工具，网页聊天应用等。
+以 I/O 为主的高并发应用，比如为客户端提供 API，读取数据库。
+流式应用，比如客户端经常上传文件。
+前后端分离。
+实际上前两者可以归结为一种，即客户端广泛使用长连接，虽然并发数较高，但其中大部分是空闲连接。
+
+Node.js 也有它的局限性，它并不适合 CPU 密集型的任务，比如人工智能方面的计算，视频、图片的处理等。
+
+以下是Node的几个简单应用，供参考。
+
+###一、爬虫
+
+	var https = require('https')
+ 
+	var cheerio = require('cheerio')
+ 
+	var baseUrl = 'https://www.imooc.com/learn/'
+ 
+	var url = 'https://www.imooc.com/learn/348'
+ 
+	var videoIds = [348, 259, 197, 134, 75]
+ 
+ 
+ 
+	function filterChapters(html) {
+ 
+    	var $ = cheerio.load(html)
+ 
+    	var chapters = $('.chapter')
+ 
+    	var title = $('hd h2').text()
+ 
+    	var number = parseInt($('.js-learn-num').text())
+ 
+    	var coursesData = {
+ 
+        	title: title,
+ 
+        	number: number,
+ 
+        	videos: []
+ 
+    	}
+ 
+    	chapters.each(function (item) {
+ 
+        	var chapter = $(this)
+ 
+        	var chapterTitle = chapter.find('.chapter-description').text()
+ 
+        	var videos = chapter.find('.video').children('li')
+ 
+        	var chapterData = {
+ 
+            	chapterTitle: chapterTitle,
+ 
+            	videos: []
+ 
+        	}
+ 
+        	videos.each(function (item) {
+ 
+            	var video = $(this).find('.J-media-item')
+ 
+            	var videoTitle = video.text()
+ 
+            	var id = video.attr('href').split('video/')[1]
+ 
+            	chapterData.videos.push({
+ 
+                	title: videoTitle,
+ 
+                	id: id
+ 
+            	})
+ 
+        	})
+ 
+        	coursesData.videos.push(chapterData)
+ 
+    	})
+ 
+    	return coursesData
+ 
+	}
+ 
+ 
+ 
+	function printCourseInfo(coursesData) {
+ 
+    	coursesData.forEach((courseData) => {
+ 
+        	console.log(courseData.number) + '人学过' + courseData.title + '\n'
+ 
+    	})
+ 
+ 
+ 
+    	coursesData.forEach(courseData => {
+ 
+        	console.log('###' + courseData.title + '\n')
+ 
+        	courseData.videos.forEach((item) => {
+ 
+            	var chapterTitle = item.chapterTitle
+ 
+            	console.log(chapterTitle + '\n')
+ 
+            	item.videos.forEach(video => {
+ 
+                	console.log('【' + video.id + '】' + video.title + '\n')
+ 
+            	})
+ 
+        	})
+ 
+    	});
+ 
+	}
+ 
+ 
+ 
+	function getPageAsync(url) {
+ 
+    	return new Promise(function (resolve, reject) {
+ 
+        	console.log("正在爬取" + url)
+ 
+        	https.get(url, function (res) {
+ 
+            	var html = ''
+ 
+            	res.on('data', function (data) {
+ 
+                	html += data
+ 
+            	})
+ 
+            	res.on('end', function () {
+ 
+                	resolve(html)
+ 
+            	})
+ 
+        	}).on('error', function () {
+ 
+            	console.log('获取出错')
+ 
+            	reject(e)
+ 
+        	})
+ 
+    	})
+ 
+	}
+ 
+	var fetchCourseArray = []
+ 
+	videoIds.forEach((id) => {
+ 
+    	fetchCourseArray.push(getPageAsync(baseUrl + id))
+ 
+	})
+ 
+ 
+ 
+	Promise.all(fetchCourseArray).then(function (pages) {
+ 
+    	//
+ 
+    	var courseData = []
+ 
+    	pages.forEach(function (html) {
+ 
+        	var courses = filterChapters(html)
+ 
+        	courseData.push(courses)
+ 
+    	})
+ 
+    	courseData.sort((a, b) => {
+ 
+        	return a.number < b.number
+ 
+    	})
+ 
+    	printCourseInfo(courseData)
+ 
+	})
+###二、require简易实现
+
+Node中的require是一个常见函数，为此我看了一些资料，了解原理后自己实现了一个简易的require。
+
+	'use strict';
+ 
+	function $require(id){
+    	let fs = require('fs');
+    	let path = require('path');
+ 
+    	let fileName = path.join(__filename, id);
+    	let pathName = path.basename(fileName);
+    	$require.cache = $require.cache || {};
+    	if($require.cache){
+        	return $require.cache[fileName].module;
+    	}
+    	const dirname = path.dirname(filename);  
+    	let code = fs.readFileSync(__dirname + id, 'utf8');
+    
+    	let module = {id:fileName, exports:{}}
+    	let exports = module.exports;
+    	code = `(function($require, module, exports, __dirname, __filename){
+        	${code}
+    	})($require, module, exports, dirname, filename)`
+    	eval(code)
+    	$require.cache[filename] = module;
+    	return module.exports;
+	} 
+ 
+	var m1 = $require('./module.js');//要导入的文件模块路径
+
+###三、创建目录实现mkdirs
+
+	const fs = require('fs');
+	const path = require('path');
+ 
+	function mkdirs(pathname, callback) {
+  		// module.parent 拿到的是调用父对象的文件目录
+  		var root = path.dirname(module.parent.filename);
+ 
+  		pathname = path.isAbsolute(pathname) ? pathname : path.join(root, pathname)
+ 
+  		var relativepath = path.relative(root, pathname);
+ 
+  		var folders = relativepath.split(path.sep);
+ 
+  		try {
+    		var pre = '';
+    		folders.forEach(folder => {
+    			try {// 如果不存在则报错
+        			fs.statSync(path.join(root, pre, folder));
+      			} catch (error) {
+        			fs.mkdirSync(path.join(root, pre, folder));
+      			}
+      			pre = path.join(pre, folder);
+    		});
+    		callback && callback(null);
+  		} catch (error) {
+    		callback && callback(error);
+  		}
+	}
+ 
+	module.exports = mkdirs;
+ 
+ 
+调用
+
+	var mkdirs = require('./module/mkdirs');
+	var path = require('path');
+ 
+	mkdirs('./d1/d2/d3/d4/d5', (err) => { console.log(err); });
+###四、实现markdown文件监听并转化为html文件
+
+	//调用： node 本文件名 要监听的markdown文件
+	'use strict'
+ 
+	let fs = require('fs');
+	let path = require('path');
+	let marked = require('marked');//process markdown...
+	const browserSync = require("browser-sync");
+ 
+	// get target markdown file path...
+	const target = path.join(__dirname, process.argv[2]);
+ 
+	// after convert to HTML location...
+	var filename = target.replace(path.extname(target), '.html');
+ 
+	// get html file name...
+	var indexpath = path.basename(filename);
+ 
+	// Start the server
+	browserSync({
+    	notify: false,
+    	server: path.dirname(target),
+    	index: indexpath 
+	});
+ 
+	fs.watchFile(target, { interval: 200 }, (curr, prev) => {
+    	if(curr.mtime === prev.mtime){
+        	return false;
+    	}
+ 
+    	fs.readFile(target, 'utf8', (error, content) => {
+        	if(error){
+            	console.log(error)
+        	}
+        	var html = marked(content);
+        	template.replace(`{{{content}}}`, html);
+        	fs.writeFile(target.replace(path.extname(target), '.html'), html, 'utf8', (err, css) => {
+            	html = template.replace('{{{content}}}', html).replace('{{{styles}}}', css);
+ 
+            	fs.writeFile(filename, html, 'utf8', (err) => {
+                	browserSync.reload(indexpath);
+            	});
+        	});
+    	})
+	})
+ 
+	let template = `
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+  		<meta charset="UTF-8">
+  		<style>{{{styles}}}</style>
+	</head>
+	<body>
+  		<div class="vs">
+    		{{{content}}}
+  		</div>
+	</body>
+	</html>
+	`;
