@@ -1,62 +1,68 @@
-html文件
+###说明：
+(1)本次业务实现说明：前端导入excel文件给后端，后端解析后，如果上传成功返回json格式（如果有格式错误返回的result字段不为0，成功上传数据库返回0），上传失败返回标注错误的excel文件。
 
-	<form id="uploadForm" name="fileinfo" enctype="multipart/form-data" method="post">
-    	<div style="display: inline-flex">上传excel文件：
-        <input name="fileinfo" type="file" id="avatar"         
-              accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
+(2)本次采用原生js请求+formdata完成数据上传，返回指定为blob数据，返回数据判断blob的type类型，如果成功返回json使用fileReader解析，失败则返回excel文件使用a标签下载。
+
+(3)注意：请求不能在表单上添加action，否则会刷新页面。
+###html文件
+
+	<div style="display: inline-flex">上传excel文件：
+    	<input name="fileinfo" type="file" id="avatar"         
+          accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
                    application/vnd.ms-excel" multiple style="width: 320px;" />
-    	</div>
-    	<div style="display: inline-flex">
-        <input type='submit' value="上传Excel文件" id="uploadFileBtn"
-     		style="border-radius: 10px;float:right;margin-top: 15px;font-size: 14px;float: right;"
-              href="#" class="btn-flat btn-success mr-5" />
-    	</div>
-	</form>
+	</div>
+	<div style="display: inline-flex">
+    	<input type='submit' value="上传Excel文件" id="uploadFileBtn"
+     	style="border-radius: 10px;float:right;margin-top: 15px;font-size: 14px;float: right;"
+         href="#" class="btn-flat btn-success mr-5" />
+	</div>
+    
 
-js文件
+###js文件
 
 	$body.on('click', '#uploadFileBtn', function (e) {
-            var data = new FormData(document.forms.namedItem("fileinfo"));
-            try {
-                var xhr = new XMLHttpRequest();
-                // xhr.open('POST', '../api/f9/ver2/excel/upload', true);
-                xhr.open('POST', '../api/f9/titles', true);
-                xhr.responseType = "blob";
-                xhr.onreadystatechange = function () {
-                    // console.log(xhr);
-                    if (xhr.readyState === 4) {
-                        if (xhr.status === 200) {
-                            var blob = new Blob([xhr.response]);
-                            var reader = new FileReader();
-                            reader.readAsText(blob);
-                            if (xhr.response.type !== 'application/msexcel') {
-                                //上传成功...
-                            } else {
-                                //上传失败，返回错误excel文件
-                                var url = window.URL.createObjectURL(blob, {
-                                    type: 'application/vnd.ms-excel'
-                                });
-                                var a = document.createElement('a');
-                                a.download = 'error.xls';
-                                a.href = url;
-                                $body.append(a);
-                                a.click();
-                                $(a).remove();
-                            }
-                            
-                        };
-                    }  
-                };
-                xhr.send(data);
- 
-            } catch (e) {
-                //添加错误逻辑
-            } finally {
-                //其他业务逻辑
-            }    
-        });
-注意：
+    	var data = new FormData(document.forms.namedItem("fileinfo"));
+    	try {
+        	var xhr = new XMLHttpRequest();
+        	// xhr.open('POST', '../api/f9/ver2/excel/upload', true);
+        	xhr.open('POST', '../api/f9/titles', true);
+        	xhr.responseType = "blob";
+        	xhr.onreadystatechange = function () {
+            	// console.log(xhr);
+            	if (xhr.readyState === 4 && xhr.status === 200) {
+                	var blob = new Blob([xhr.response]);
+                	if (xhr.response.type !== 'text/plain') {
+                        
+                    	var reader = new FileReader();
+                    	var res;
+                    	reader.onloadend = function(ev){
+                        	res = reader.result;
+                        	if(res.result === 0){
+                            //success...
+                        	}else{
+                            	//error...
+                        	}
+                    	}
+                    	reader.readAsText(blob);
+                	} else {
+                    	//error, return excel file...
+                    	var url = window.URL.createObjectURL(blob, {
+                        	type: 'application/vnd.ms-excel'
+                    	});
+                    	var a = document.createElement('a');
+                    	a.download = 'error.xls';
+                    	a.href = url;
+                    	$body.append(a);
+                    	a.click();
+                    	$(a).remove();
+                	}                                
+            	};
+        	};
+        	xhr.send(data);
 
-（1）本次采用原生js请求+formdata完成数据上传，如果不需要返回excel文件，则不需要使用原生js请求
-
-（2）思路：请求采用formdata形式将文件以二进制流形式传到后端，不能在表单上添加action，否则会刷新页面；后端接收类型设置为blob类型，然后用fileReader以text读取，判断类型是blob格式或者excel格式，分别处理。
+    	} catch (e) {
+        	//添加错误逻辑
+    	} finally {
+        	//其他业务逻辑
+    	}    
+	});
